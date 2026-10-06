@@ -37,15 +37,126 @@ db.connect((err) => {
     }
     console.log("Connected to MySQL database.");
 
-    db.query(`CREATE TABLE IF NOT EXISTS users (...)`, (err) => { ... });
-    // ... (you can leave the rest of the table creation out for the serverless function, 
-    // but it's fine to leave it. Actually, for Vercel, it's better to remove the 
-    // db.connect block because serverless functions connect on demand. 
-    // But let's keep it simple and just fix the app.listen issue).
-});
+    db.query(`ALTER TABLE users ADD COLUMN country VARCHAR(255)`, (err) => {
+        if (err) { if (err.errno === 1060) console.log("Users.country column already exists"); else console.error(err.message); }
+        else console.log("SUCCESS: users.country column added!");
+    });
+    db.query(`ALTER TABLE users ADD COLUMN vat_rate DECIMAL(5,2) DEFAULT 16.00`, (err) => {
+        if (err) { if (err.errno === 1060) console.log("Users.vat_rate column already exists"); else console.error(err.message); }
+        else console.log("SUCCESS: users.vat_rate column added!");
+    });
+    db.query(`ALTER TABLE users ADD COLUMN company_name VARCHAR(255)`, (err) => {
+        if (err) { if (err.errno === 1060) console.log("Users.company_name already exists"); else console.error(err.message); }
+    });
+    db.query(`ALTER TABLE users ADD COLUMN company_address VARCHAR(255)`, (err) => {
+        if (err) { if (err.errno === 1060) console.log("Users.company_address already exists"); else console.error(err.message); }
+    });
+    db.query(`ALTER TABLE users ADD COLUMN company_email VARCHAR(255)`, (err) => {
+        if (err) { if (err.errno === 1060) console.log("Users.company_email already exists"); else console.error(err.message); }
+    });
+    db.query(`ALTER TABLE users ADD COLUMN company_logo LONGTEXT`, (err) => {
+        if (err) { if (err.errno === 1060) console.log("Users.company_logo already exists"); else console.error(err.message); }
+    });
+    db.query(`ALTER TABLE invoices ADD COLUMN vat_rate DECIMAL(5,2) DEFAULT 16.00`, (err) => {
+        if (err) { if (err.errno === 1060) console.log("Invoices.vat_rate already exists"); else console.error(err.message); }
+        else console.log("SUCCESS: invoices.vat_rate column added!");
+    });
+    db.query(`ALTER TABLE invoices ADD COLUMN description TEXT`, (err) => {
+        if (err) { if (err.errno === 1060) console.log("Invoices.description already exists"); else console.error(err.message); }
+    });
+    db.query(`ALTER TABLE invoices ADD COLUMN vat_applied BOOLEAN DEFAULT TRUE`, (err) => {
+        if (err) { if (err.errno === 1060) console.log("Invoices.vat_applied already exists"); else console.error(err.message); }
+    });
+    db.query(`ALTER TABLE expenses ADD COLUMN receipt_image LONGTEXT`, (err) => {
+        if (err) { if (err.errno === 1060) console.log("Expenses.receipt_image already exists"); else console.error(err.message); }
+    });
 
-// Actually, to keep it 100% simple and bulletproof, let's remove the db.connect block 
-// from server.js and just rely on the pool in db.js. Vercel will use the pool.
+    db.query(`
+        CREATE TABLE IF NOT EXISTS users (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            email VARCHAR(255) NOT NULL UNIQUE,
+            password VARCHAR(255) NOT NULL,
+            role VARCHAR(50) DEFAULT 'admin',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    `, (err) => { if (err) console.error(err.message); else console.log("Users table is ready!"); });
+
+    db.query(`
+        CREATE TABLE IF NOT EXISTS customers (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            name VARCHAR(255) NOT NULL,
+            email VARCHAR(255),
+            phone VARCHAR(50),
+            company VARCHAR(255),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    `, (err) => { if (err) console.error(err.message); else console.log("Customers table is ready!"); });
+
+    db.query(`
+        CREATE TABLE IF NOT EXISTS invoices (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            customer_id INT NOT NULL,
+            invoice_number VARCHAR(255) NOT NULL,
+            amount DECIMAL(10,2) NOT NULL,
+            status VARCHAR(50) DEFAULT 'Unpaid',
+            due_date DATE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    `, (err) => { if (err) console.error(err.message); else console.log("Invoices table is ready!"); });
+
+    db.query(`
+        CREATE TABLE IF NOT EXISTS expenses (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            category VARCHAR(255) NOT NULL,
+            description TEXT,
+            amount DECIMAL(10,2) NOT NULL,
+            date DATE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    `, (err) => { if (err) console.error(err.message); else console.log("Expenses table is ready!"); });
+
+    db.query(`
+        CREATE TABLE IF NOT EXISTS inventory (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            name VARCHAR(255) NOT NULL,
+            description TEXT,
+            price DECIMAL(10,2) NOT NULL,
+            stock INT DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    `, (err) => { if (err) console.error(err.message); else console.log("Inventory table is ready!"); });
+
+    db.query(`
+        CREATE TABLE IF NOT EXISTS vendors (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            name VARCHAR(255) NOT NULL,
+            email VARCHAR(255),
+            phone VARCHAR(50),
+            company VARCHAR(255),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    `, (err) => { if (err) console.error(err.message); else console.log("Vendors table is ready!"); });
+
+    db.query(`
+        CREATE TABLE IF NOT EXISTS credit_notes (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            customer_id INT NOT NULL,
+            cn_number VARCHAR(255) NOT NULL,
+            amount DECIMAL(10,2) NOT NULL,
+            reason TEXT,
+            date DATE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    `, (err) => { if (err) console.error(err.message); else console.log("Credit Notes table is ready!"); });
+});
+// ------------------------------------------------
 
 // Routes
 app.use('/api/auth', authRoutes);
